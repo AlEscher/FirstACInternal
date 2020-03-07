@@ -13,4 +13,4 @@ My first internal cheat for the game [Assault Cube](https://assault.cubers.net/)
 * Add 10 kills to scoreboard
 
 ## Preview
-![MenuPreview](https://prnt.sc/rd3eoy)
+![MenuPreview](https://i.imgur.com/vUMZuIY.jpg)
