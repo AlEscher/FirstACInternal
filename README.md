@@ -11,3 +11,6 @@ My first internal cheat for the game [Assault Cube](https://assault.cubers.net/)
 * Set teleporter coordinates
 * Teleport to set coordinates
 * Add 10 kills to scoreboard
+
+## Preview
+![MenuPreview](https://prnt.sc/rd3eoy)
