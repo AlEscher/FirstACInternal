@@ -14,7 +14,7 @@ void clearLine(int limit)
 	std::cout << std::endl;
 }
 
-void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, bool bNades, bool bSpeed)
+void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, bool bNades, bool bSpeed, bool bNameChanger)
 {
 	std::cout << "---------------------------------------------" << std::endl;
 	std::cout << "|-------Assault Cube Internal Trainer-------|" << std::endl;
@@ -90,6 +90,16 @@ void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, b
 	}
 	clearLine(5);
 
+	std::cout << "| [NUM_PAD 0] Name Changer :";
+	if (bNameChanger)
+	{
+		std::cout << "          [ON]  |";
+	}
+	else
+	{
+		std::cout << "          [OFF] |";
+	}
+	clearLine(5);
 	std::cout << "| [NUM_PAD 7] Add 10 frags to Scoreboard    |\n";
 	std::cout << "| [NUM_PAD 8] Set teleport coordinates      |\n";
 	std::cout << "| [NUM_PAD 9] Teleport to set coordinates   |\n";
@@ -112,7 +122,7 @@ bool Hook(void* toHook, void* ourFunct, int len, bool hook, std::vector<BYTE> *o
 		VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection);
 
 		// save the current opCodes before placing our escape jump
-		for (int i = 0; i < (*oldOpCodes).size(); i++)
+		for (unsigned int i = 0; i < (*oldOpCodes).size(); i++)
 		{
 			(*oldOpCodes)[i] = *((BYTE*)toHook + i);
 		}
@@ -142,7 +152,7 @@ bool Hook(void* toHook, void* ourFunct, int len, bool hook, std::vector<BYTE> *o
 			std::cout << "Failed to change protection\n";
 		}
 		// rewrite the old opcodes
-		for (int i = 0; i < (*oldOpCodes).size(); i++)
+		for (unsigned int i = 0; i < (*oldOpCodes).size(); i++)
 		{
 			*((BYTE*)toHook + i) = (*oldOpCodes)[i];
 		}

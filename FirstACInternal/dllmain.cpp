@@ -190,12 +190,16 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	// Get module base
 	uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
 	localPlayer = *(uintptr_t*)(moduleBase + 0x10F4F4);
+	char* playerNamePtr = (char*)(localPlayer + 0x225);
+	std::valarray<char> playerName(playerNamePtr, strlen((const char*)playerNamePtr));
+	std::string nameBackup(playerNamePtr, strlen((const char*)playerNamePtr));
+	int nameChangerCtr = 0;
 	
 	ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
 	localPlayerForGodMode = localPlayer + 0xF4;
 	rapidFireMode = 1;
 
-	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bSpeed = false, coordSet = false;
+	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bSpeed = false, coordSet = false, bNameChanger = false;
 
 	std::vector<BYTE> healthOpcodes, ammoOpcodes, recoilOpcodes, rapidOpcodes, nadeOpcodes, speedOpcodes;
 	std::vector<float> coordinates(3);
@@ -205,7 +209,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 	GetConsoleScreenBufferInfo(h, &bufferInfo);
 
-	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 
 	// Hack loop
 	while (true)
@@ -249,6 +253,12 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			{
 				handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
 			}
+			// reset the name
+			for (unsigned int i = 0; i < nameBackup.size(); i++)
+			{
+				*(playerNamePtr + i) = nameBackup[i];
+			}
+
 			break;
 		}
 
@@ -258,7 +268,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleHealth(moduleBase, &healthOpcodes, bHealth);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD2) & 1)
@@ -267,7 +277,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD3) & 1)
@@ -276,7 +286,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD4) & 1)
@@ -289,7 +299,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD5) & 1)
@@ -298,7 +308,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleGrenade(moduleBase, &nadeOpcodes, bNades);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		// disabled for now since it's unstable
@@ -308,7 +318,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD7) & 1)
@@ -337,11 +347,43 @@ DWORD WINAPI HackThread(HMODULE hModule)
 
 		if (GetAsyncKeyState(VK_NUMPAD0) & 1)
 		{
-			
+			bNameChanger = !bNameChanger;
+
+			if (!bNameChanger)
+			{
+				// reset name
+				for (unsigned int i = 0; i < nameBackup.size(); i++)
+				{
+					*(playerNamePtr + i) = nameBackup[i];
+				}
+			}
+
+			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
 		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
 		ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
-		Sleep(10);
+		Sleep(5);
+
+		if (bNameChanger)
+		{
+			// every 40 cycles (~200 ms) shift the name by 1 char
+			if (nameChangerCtr == 40)
+			{
+				// rotate the name by 1 to the left (to the right would be -1)
+				playerName = playerName.cshift(1);
+				// write the shifted name into memory
+				for (unsigned int i = 0; i < playerName.size(); i++)
+				{
+					*(playerNamePtr + i) = playerName[i];
+				}
+				nameChangerCtr = 0;
+			}
+			else
+			{
+				nameChangerCtr++;
+			}
+		}
 	}
 
 	// Cleanup & eject
