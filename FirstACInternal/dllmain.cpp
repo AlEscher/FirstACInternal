@@ -212,40 +212,16 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		if (GetAsyncKeyState(VK_END) & 1)
 		{
 			// Undo all code patches before ejecting
-			// Just setting all bools to false and then calling every "handle..." function doesn't work, makes the game crash.
-			// I have no clue why.
-			// Only works if all cheats are set to ON before uninjecting...
-			bHealth = !bHealth;
-			bAmmo = !bAmmo;
-			bRecoil = !bRecoil;
-			bNades = !bNades;
-			bSpeed = !bSpeed;
+			bHealth = bAmmo = bRecoil = bNades = false;
 			rapidFireMode = 1;
 
-			if (!bHealth)
-			{
-				handleHealth(moduleBase, &healthOpcodes, bHealth);
-			}
-			if (!bAmmo)
-			{
-				handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
-			}
-			if (!bRecoil)
-			{
-				handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
-			}
-			if (rapidFireMode == 1)
-			{
-				handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
-			}
-			if (!bNades)
-			{
-				handleGrenade(moduleBase, &nadeOpcodes, bNades);
-			}
-			if (!bSpeed)
-			{
-				handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
-			}
+			handleHealth(moduleBase, &healthOpcodes, bHealth);
+			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
+			// unpatching handleRecoil somehow doesn't work, my jmp is not being overwritten
+			handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
+			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
+			handleGrenade(moduleBase, &nadeOpcodes, bNades);
+			//handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
 			break;
 		}
 
@@ -403,13 +379,21 @@ void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int ra
 	DWORD hookAddress = moduleBase + 0x637E4;
 	int hookLength = 5;
 	jmpBackAddyRapid = hookAddress + hookLength;
-	if (rapidFireMode == 1)
+	// only save the current Opcodes if rapidFire was just turned on (went from 1 to 2)
+	if (rapidFireMode == 2)
+	{
+		Hook((void*)hookAddress, rapidFire, hookLength, true, oldOpCodes);
+	}
+	// if rapidFire was just turned off, rewrite the old opcodes
+	else if (rapidFireMode == 1)
 	{
 		Hook((void*)hookAddress, rapidFire, hookLength, false, oldOpCodes);
 	}
+	// if rapidFireMode was turned from e.g. 4 to 8, don't do anything as the function is already hooked
+	// we do not want to read / write opcodes in this case
 	else
 	{
-		Hook((void*)hookAddress, rapidFire, hookLength, true, oldOpCodes);
+		return;
 	}
 }
 

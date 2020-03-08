@@ -99,6 +99,7 @@ void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, b
 
 bool Hook(void* toHook, void* ourFunct, int len, bool hook, std::vector<BYTE> *oldOpCodes) 
 {
+	(*oldOpCodes).resize(len);
 	if (hook)
 	{
 		// the space we put our jump has to be at least 5 bytes
@@ -106,7 +107,6 @@ bool Hook(void* toHook, void* ourFunct, int len, bool hook, std::vector<BYTE> *o
 		{
 			return false;
 		}
-		(*oldOpCodes).resize(len);
 
 		DWORD curProtection;
 		VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection);
