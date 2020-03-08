@@ -4,6 +4,7 @@
 #include <iostream>
 #include <TlHelp32.h>
 #include <vector>
+#include <valarray>
 #include "util.h"
 #include "mem.h"
 #include "proc.h"
@@ -189,6 +190,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	// Get module base
 	uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
 	localPlayer = *(uintptr_t*)(moduleBase + 0x10F4F4);
+	
 	ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
 	localPlayerForGodMode = localPlayer + 0xF4;
 	rapidFireMode = 1;
@@ -212,16 +214,41 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		if (GetAsyncKeyState(VK_END) & 1)
 		{
 			// Undo all code patches before ejecting
-			bHealth = bAmmo = bRecoil = bNades = false;
+			bHealth = !bHealth;
+			bAmmo = !bAmmo;
+			bRecoil = !bRecoil;
+			bNades = !bNades;
+			bSpeed = !bSpeed;
 			rapidFireMode = 1;
 
-			handleHealth(moduleBase, &healthOpcodes, bHealth);
-			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
-			// unpatching handleRecoil somehow doesn't work, my jmp is not being overwritten
-			handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
-			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
-			handleGrenade(moduleBase, &nadeOpcodes, bNades);
-			//handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
+			// we only want to unpatch if the specific setting was activated at least once during runtime
+			// if we don't do this and uninject without having activated the godmode for example, it's gonna write a bunch of 0s in the code of the game
+			// since the old opcodes were never read
+			if (!bHealth)
+			{
+				handleHealth(moduleBase, &healthOpcodes, bHealth);
+			}
+			if (!bAmmo)
+			{
+				handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
+			}
+			if (!bRecoil)
+			{
+				handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
+			}
+			// only unpatch rapid fire if we have opcodes saved (in other words if the setting was activated at least once)
+			if (rapidOpcodes.size() > 0)
+			{
+				handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
+			}
+			if (!bNades)
+			{
+				handleGrenade(moduleBase, &nadeOpcodes, bNades);
+			}
+			if (!bSpeed)
+			{
+				handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
+			}
 			break;
 		}
 
@@ -307,6 +334,11 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				*(float*)(localPlayer + 0x3C) = coordinates[2];
 			}
 		}
+
+		if (GetAsyncKeyState(VK_NUMPAD0) & 1)
+		{
+			
+		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
 		ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
 		Sleep(10);
@@ -385,6 +417,7 @@ void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int ra
 		Hook((void*)hookAddress, rapidFire, hookLength, true, oldOpCodes);
 	}
 	// if rapidFire was just turned off, rewrite the old opcodes
+	// also check if we have opcodes saved (in other words if the setting was ever activated)
 	else if (rapidFireMode == 1)
 	{
 		Hook((void*)hookAddress, rapidFire, hookLength, false, oldOpCodes);
