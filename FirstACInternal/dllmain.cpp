@@ -187,10 +187,16 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	FILE* f;
 	freopen_s(&f, "CONOUT$", "w", stdout);
 
-	// Get module base
+	// Setup the variables we need
 	uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
 	localPlayer = *(uintptr_t*)(moduleBase + 0x10F4F4);
+
 	char* playerNamePtr = (char*)(localPlayer + 0x225);
+	// fill the player name with spaces (I believe the name can be max 15 characters, not sure though)
+	for (int i = strlen((const char*)playerNamePtr); i < 15 - strlen((const char*)playerNamePtr); i++)
+	{
+		*(playerNamePtr + i) = ' ';
+	}
 	std::valarray<char> playerName(playerNamePtr, strlen((const char*)playerNamePtr));
 	std::string nameBackup(playerNamePtr, strlen((const char*)playerNamePtr));
 	int nameChangerCtr = 0;
@@ -226,8 +232,8 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			rapidFireMode = 1;
 
 			// we only want to unpatch if the specific setting was activated at least once during runtime
-			// if we don't do this and uninject without having activated the godmode for example, it's gonna write a bunch of 0s in the code of the game
-			// since the old opcodes were never read
+			// if we don't do this and uninject without having activated the godmode for example, it's gonna write a bunch of 0s in the code of the game,
+			// since the opcode vectors aren't initialized and the old opcodes were never read
 			if (!bHealth)
 			{
 				handleHealth(moduleBase, &healthOpcodes, bHealth);
