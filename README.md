@@ -1,7 +1,7 @@
 # FirstACInternal
-My first internal cheat for the game [Assault Cube](https://assault.cubers.net/)
-Meant only for Singleplayer against Bots!
-Cheater are beaters and Hackers are whackers.
+My first internal cheat for the game [Assault Cube](https://assault.cubers.net/)  
+Meant only for Singleplayer against Bots!  
+Cheater are beaters and Hackers are whackers.  
 
 ## Features
 * Godmode
