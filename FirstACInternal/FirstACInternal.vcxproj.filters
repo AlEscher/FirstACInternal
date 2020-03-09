@@ -16,9 +16,6 @@
     <Filter Include="Mem">
       <UniqueIdentifier>{bb4b0cba-64d5-4ccf-993d-558c5c3421cc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Proc">
-      <UniqueIdentifier>{9a54c732-a1ba-4dbc-942b-7098b5488c40}</UniqueIdentifier>
-    </Filter>
     <Filter Include="pch">
       <UniqueIdentifier>{a1fe431e-baf2-426b-999e-ee11ebc82dba}</UniqueIdentifier>
     </Filter>
@@ -26,9 +23,6 @@
   <ItemGroup>
     <ClInclude Include="framework.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="Proc.h">
-      <Filter>Proc</Filter>
     </ClInclude>
     <ClInclude Include="Mem.h">
       <Filter>Mem</Filter>
@@ -46,9 +40,6 @@
     </ClCompile>
     <ClCompile Include="Mem.cpp">
       <Filter>Mem</Filter>
-    </ClCompile>
-    <ClCompile Include="Proc.cpp">
-      <Filter>Proc</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
       <Filter>pch</Filter>

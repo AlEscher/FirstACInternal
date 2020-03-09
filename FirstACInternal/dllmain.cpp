@@ -7,14 +7,12 @@
 #include <valarray>
 #include "util.h"
 #include "mem.h"
-#include "proc.h"
 
 void handleHealth(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bHealth);
 void handleAmmo(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bAmmo);
 void handleRecoil(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bRecoil);
 void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int rapidFireMode);
 void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bNades);
-void handleSpeedHack(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bSpeed);
 uintptr_t localPlayerForGodMode;
 uintptr_t ammoAddr;
 uintptr_t localPlayer;
@@ -193,7 +191,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 
 	char* playerNamePtr = (char*)(localPlayer + 0x225);
 	// fill the player name with spaces (I believe the name can be max 15 characters, not sure though)
-	for (int i = strlen((const char*)playerNamePtr); i < 15 - strlen((const char*)playerNamePtr); i++)
+	for (unsigned int i = strlen((const char*)playerNamePtr); i < 15 - strlen((const char*)playerNamePtr); i++)
 	{
 		*(playerNamePtr + i) = ' ';
 	}
@@ -205,7 +203,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	localPlayerForGodMode = localPlayer + 0xF4;
 	rapidFireMode = 1;
 
-	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bSpeed = false, coordSet = false, bNameChanger = false;
+	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bFly = false, coordSet = false, bNameChanger = false;
 
 	std::vector<BYTE> healthOpcodes, ammoOpcodes, recoilOpcodes, rapidOpcodes, nadeOpcodes, speedOpcodes;
 	std::vector<float> coordinates(3);
@@ -215,7 +213,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 	GetConsoleScreenBufferInfo(h, &bufferInfo);
 
-	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 
 	// Hack loop
 	while (true)
@@ -228,7 +226,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			bAmmo = !bAmmo;
 			bRecoil = !bRecoil;
 			bNades = !bNades;
-			bSpeed = !bSpeed;
+			bFly = !bFly;
 			rapidFireMode = 1;
 
 			// we only want to unpatch if the specific setting was activated at least once during runtime
@@ -255,9 +253,9 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			{
 				handleGrenade(moduleBase, &nadeOpcodes, bNades);
 			}
-			if (!bSpeed)
+			if (!bFly)
 			{
-				handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
+				*(BYTE*)(localPlayer + 0x338) = 0;
 			}
 			// reset the name
 			for (unsigned int i = 0; i < nameBackup.size(); i++)
@@ -274,7 +272,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleHealth(moduleBase, &healthOpcodes, bHealth);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD2) & 1)
@@ -283,7 +281,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD3) & 1)
@@ -292,7 +290,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD4) & 1)
@@ -305,7 +303,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD5) & 1)
@@ -314,17 +312,24 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleGrenade(moduleBase, &nadeOpcodes, bNades);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		// disabled for now since it's unstable
-		if (GetAsyncKeyState(VK_NUMPAD6) & 1 && false)
+		if (GetAsyncKeyState(VK_NUMPAD6) & 1)
 		{
-			bSpeed = !bSpeed;
-			handleSpeedHack(moduleBase, &speedOpcodes, bSpeed);
+			bFly = !bFly;
+			if (bFly)
+			{
+				*(BYTE*)(localPlayer + 0x338) = 5;
+			}
+			else
+			{
+				*(BYTE*)(localPlayer + 0x338) = 0;
+			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD7) & 1)
@@ -365,7 +370,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bSpeed, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
 		ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
@@ -490,14 +495,5 @@ void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bNa
 	int hookLength = 5;
 	jmpBackAddyNades = hookAddress + hookLength;
 	Hook((void*)hookAddress, unlimNades, hookLength, bNades, oldOpCodes);
-}
-
-void handleSpeedHack(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bSpeed)
-{
-	// hook when current acceleration float is read / loaded
-	DWORD hookAddress = moduleBase + 0x5B10C;
-	int hookLength = 5;
-	jmpBackAddySpeed = hookAddress + hookLength;
-	Hook((void*)hookAddress, speedHack, hookLength, bSpeed, oldOpCodes);
 }
 
