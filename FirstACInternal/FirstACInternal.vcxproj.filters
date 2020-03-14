@@ -19,6 +19,9 @@
     <Filter Include="pch">
       <UniqueIdentifier>{a1fe431e-baf2-426b-999e-ee11ebc82dba}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Utility">
+      <UniqueIdentifier>{7c9049b1-8df2-40af-bdf8-8b1d92c713dd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -31,7 +34,10 @@
       <Filter>pch</Filter>
     </ClInclude>
     <ClInclude Include="util.h">
-      <Filter>Header Files</Filter>
+      <Filter>Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="ConsoleColor.h">
+      <Filter>Utility</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -45,7 +51,7 @@
       <Filter>pch</Filter>
     </ClCompile>
     <ClCompile Include="Util.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Utility</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

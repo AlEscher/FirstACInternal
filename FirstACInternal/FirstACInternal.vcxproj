@@ -151,6 +151,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ConsoleColor.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Mem.h" />
     <ClInclude Include="pch.h" />

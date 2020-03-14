@@ -20,90 +20,90 @@ void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, b
 	std::cout << "|-------Assault Cube Internal Trainer-------|" << std::endl;
 	std::cout << "|---------------Made by Kekz----------------|" << std::endl;
 	std::cout << "|-------------------------------------------|" << std::endl;
-	std::cout << "| [NUM_PAD 1] Godmode :";
+	std::cout << "| " << blue << "[NUM_PAD 1]" << white << " Godmode :";
 	if (bHealth)
 	{
-		std::cout << "               [ON]  |";
+		std::cout << green << "                ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "               [OFF] |";
+		std::cout << red << "                OFF" << white << "  |";
 	}
 	clearLine(5);
 
-	std::cout << "| [NUM_PAD 2] Unlimited Ammo :";
+	std::cout << "| " << blue << "[NUM_PAD 2]" << white << " Unlimited Ammo :";
 	if (bAmmo)
 	{
-		std::cout << "        [ON]  |";
+		std::cout << green << "         ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "        [OFF] |";
+		std::cout << red << "         OFF" << white << "  |";
 	}
 	clearLine(5);
 
-	std::cout << "| [NUM_PAD 3] No Recoil :";
+	std::cout << "| " << blue << "[NUM_PAD 3]" << white << " No Recoil :";
 	if (bRecoil)
 	{
-		std::cout << "             [ON]  |";
+		std::cout << green << "              ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "             [OFF] |";
+		std::cout << red << "              OFF" << white << "  |";
 	}
 	clearLine(5);
 
-	std::cout << "| [NUM_PAD 4] Rapid Fire :";
+	std::cout << "| " << blue << "[NUM_PAD 4]" << white << " Rapid Fire :";
 	if (rapidFireMode == 1)
 	{
-		std::cout << "            [OFF] |";
+		std::cout << red <<  "             OFF" << white << "  |";
 	}
 	else if (rapidFireMode == 16)
 	{
-		std::cout << "         [INSANE] |";
+		std::cout << yellow << "          INSANE" << white << "  |";
 	}
 	else
 	{
-		std::cout << "            [ x" << rapidFireMode << "] |";
+		std::cout << green << "              x" << rapidFireMode << white << "  |";
 	}
 	clearLine(5);
 	
-	std::cout << "| [NUM_PAD 5] Unlimited Grenades :";
+	std::cout << "| " << blue << "[NUM_PAD 5]" << white << " Unlimited Grenades :";
 	if (bNades)
 	{
-		std::cout << "    [ON]  |";
+		std::cout << green << "     ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "    [OFF] |";
+		std::cout << red << "     OFF" << white << "  |";
 	}
 	clearLine(5);
 
-	std::cout << "| [NUM_PAD 6] Fly hack :";
+	std::cout << "| " << blue << "[NUM_PAD 6]" << white << " Fly hack :";
 	if (bFly)
 	{
-		std::cout << "              [ON]  |";
+		std::cout << green << "               ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "              [OFF] |";
+		std::cout << red << "               OFF" << white << "  |";
 	}
 	clearLine(5);
 
-	std::cout << "| [NUM_PAD 0] Name Changer :";
+	std::cout << "| " << blue << "[NUM_PAD 0]" << white << " Name Changer :";
 	if (bNameChanger)
 	{
-		std::cout << "          [ON]  |";
+		std::cout << green << "           ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << "          [OFF] |";
+		std::cout << red << "           OFF" << white << "  |";
 	}
 	clearLine(5);
-	std::cout << "| [NUM_PAD 7] Add 10 frags to Scoreboard    |\n";
-	std::cout << "| [NUM_PAD 8] Set teleport coordinates      |\n";
-	std::cout << "| [NUM_PAD 9] Teleport to set coordinates   |\n";
-	std::cout << "| [END] Eject                               |\n";
+	std::cout << "| " << blue << "[NUM_PAD 7]" << white << " Add 10 frags to Scoreboard    |\n";
+	std::cout << "| " << blue << "[NUM_PAD 8]" << white << " Set teleport coordinates      |\n";
+	std::cout << "| " << blue << "[NUM_PAD 9]" << white << " Teleport to set coordinates   |\n";
+	std::cout << "| " << blue << "[END]      " << white << " Eject                         |\n";
 	std::cout << "---------------------------------------------" << std::endl;
 }
 
@@ -147,10 +147,7 @@ bool Hook(void* toHook, void* ourFunct, int len, bool hook, std::vector<BYTE> *o
 	else
 	{
 		DWORD curProtection;
-		if (!VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection))
-		{
-			std::cout << "Failed to change protection\n";
-		}
+		VirtualProtect(toHook, len, PAGE_EXECUTE_READWRITE, &curProtection);
 		// rewrite the old opcodes
 		for (unsigned int i = 0; i < (*oldOpCodes).size(); i++)
 		{
