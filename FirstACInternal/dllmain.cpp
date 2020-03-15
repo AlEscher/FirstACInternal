@@ -13,16 +13,31 @@ void handleAmmo(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bAmmo)
 void handleRecoil(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bRecoil);
 void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int rapidFireMode);
 void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bNades);
+
 uintptr_t localPlayerForGodMode;
 uintptr_t ammoAddr;
 uintptr_t localPlayer;
 int rapidFireMode;
+
 DWORD jmpBackAddyHealth;
 DWORD jmpBackAddyAmmo;
 DWORD jmpBackAddyRecoil;
 DWORD jmpBackAddyRapid;
 DWORD jmpBackAddyNades;
 DWORD jmpBackAddySpeed;
+
+typedef char* (__cdecl* _ACPrintF)(const char* sFormat, ...);
+_ACPrintF ACPrintF;
+// colors for the ingame chat
+#define GREEN 0
+#define BLUE 1
+#define YELLOW 2
+#define RED 3
+#define GREY 4
+#define WHITE 5
+#define DARKRED 7
+#define PINK 8
+#define ORANGE 9
 
 // naked -> no epilogue, no prologue, no extra assembly will be added during compilation
 void __declspec(naked) godMode()
@@ -208,12 +223,19 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	std::vector<BYTE> healthOpcodes, ammoOpcodes, recoilOpcodes, rapidOpcodes, nadeOpcodes, speedOpcodes;
 	std::vector<float> coordinates(3);
 	
+	// Prints text to the ingame chat
+	ACPrintF = (_ACPrintF)(moduleBase + 0x6B060);
+	// %d are flags for the color of the following strings
+	const char* sMessageFormat = "\f%d%s:\f%d %s";
+	const char* settingUpdate = "\f%d%s: \f%d%s\f%d %s";
+	const char* cheatName = "[AC_Internal]";
 
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 	GetConsoleScreenBufferInfo(h, &bufferInfo);
 
 	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+	ACPrintF(sMessageFormat, GREY, cheatName, GREEN, "Injection & Setup successful!");
 
 	// Hack loop
 	while (true)
@@ -221,6 +243,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		// Key input
 		if (GetAsyncKeyState(VK_END) & 1)
 		{
+			ACPrintF(sMessageFormat, GREY, cheatName, YELLOW, "Uninjecting...");
 			// Undo all code patches before ejecting
 			bHealth = !bHealth;
 			bAmmo = !bAmmo;
@@ -271,6 +294,15 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			bHealth = !bHealth;
 			handleHealth(moduleBase, &healthOpcodes, bHealth);
 
+			if (bHealth)
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Godmode", GREEN, "ON");
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Godmode", RED, "OFF");
+			}
+
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
@@ -279,6 +311,15 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		{
 			bAmmo = !bAmmo;
 			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
+
+			if (bAmmo)
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Ammo", GREEN, "ON");
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Ammo", RED, "OFF");
+			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
@@ -289,6 +330,15 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			bRecoil = !bRecoil;
 			handleRecoil(moduleBase, &recoilOpcodes, bRecoil);
 
+			if (bRecoil)
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "No Recoil", GREEN, "ON");
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "No Recoil", RED, "OFF");
+			}
+
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
@@ -296,9 +346,21 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		if (GetAsyncKeyState(VK_NUMPAD4) & 1)
 		{
 			rapidFireMode = (rapidFireMode * 2) % 32;
-			if (!rapidFireMode)
+			if (rapidFireMode == 0)
 			{
 				rapidFireMode = 1;
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Rapid Fire", RED, "OFF");
+			}
+			else if (rapidFireMode < 16)
+			{
+				char fireMode[2];
+				_itoa_s(rapidFireMode, fireMode, 2, 10);
+
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Rapid Fire x", GREEN, fireMode);
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Rapid Fire", DARKRED, "INSANE");
 			}
 			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
 
@@ -311,6 +373,15 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			bNades = !bNades;
 			handleGrenade(moduleBase, &nadeOpcodes, bNades);
 
+			if (bNades)
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Grenades", GREEN, "ON");
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Grenades", RED, "OFF");
+			}
+
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
@@ -322,10 +393,12 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			if (bFly)
 			{
 				*(BYTE*)(localPlayer + 0x338) = 5;
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Fly Hack", GREEN, "ON");
 			}
 			else
 			{
 				*(BYTE*)(localPlayer + 0x338) = 0;
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Fly Hack", RED, "OFF");
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
@@ -344,6 +417,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			coordinates[1] = *(float*)(localPlayer + 0x38);
 			coordinates[2] = *(float*)(localPlayer + 0x3C);
 			coordSet = true;
+			ACPrintF(sMessageFormat, GREY, cheatName, YELLOW, "Teleporter coordinates set");
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD9) & 1)
@@ -353,6 +427,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				*(float*)(localPlayer + 0x34) = coordinates[0];
 				*(float*)(localPlayer + 0x38) = coordinates[1];
 				*(float*)(localPlayer + 0x3C) = coordinates[2];
+				ACPrintF(sMessageFormat, GREY, cheatName, GREEN, "Teleported");
 			}
 		}
 
@@ -367,6 +442,12 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				{
 					*(playerNamePtr + i) = nameBackup[i];
 				}
+
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Name Changer", RED, "OFF");
+			}
+			else
+			{
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Name Changer", GREEN, "ON");
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
@@ -403,6 +484,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		fclose(f);
 	}
 	FreeConsole();
+	ACPrintF(sMessageFormat, GREY, cheatName, GREEN, "Successfully uninjected!");
 	FreeLibraryAndExitThread(hModule, 0);
 	return 0;
 }
