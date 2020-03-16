@@ -13,7 +13,7 @@ void handleHealth(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bHea
 void handleAmmo(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bAmmo);
 void handleRecoil(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bRecoil);
 void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int rapidFireMode);
-void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bNades);
+void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bTriggerBot);
 
 int32_t *ammoAddr;
 uintptr_t localPlayerASM;
@@ -28,7 +28,9 @@ DWORD jmpBackAddyNades;
 DWORD jmpBackAddySpeed;
 
 typedef char* (__cdecl* _ACPrintF)(const char* sFormat, ...);
+typedef Player* (__cdecl* _GetCrosshairEntity)();
 _ACPrintF ACPrintF;
+_GetCrosshairEntity GetCrosshairEntity;
 // colors for the ingame chat
 #define GREEN 0
 #define BLUE 1
@@ -222,13 +224,15 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
 	rapidFireMode = 1;
 
-	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bFly = false, coordSet = false, bNameChanger = false;
+	bool bHealth = false, bAmmo = false, bRecoil = false, bFly = false, coordSet = false, bNameChanger = false, bTriggerBot = false;
 
 	std::vector<BYTE> healthOpcodes, ammoOpcodes, recoilOpcodes, rapidOpcodes, nadeOpcodes, speedOpcodes;
 	std::vector<float> coordinates(3);
 	
 	// Prints text to the ingame chat
 	ACPrintF = (_ACPrintF)(moduleBase + 0x6B060);
+	// Gets the player we are aiming at
+	GetCrosshairEntity = (_GetCrosshairEntity)(moduleBase + 0x607c0);
 	// %d are flags for the color of the following strings
 	const char* sMessageFormat = "\f%d%s:\f%d %s";
 	const char* settingUpdate = "\f%d%s: \f%d%s\f%d %s";
@@ -238,7 +242,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 	GetConsoleScreenBufferInfo(h, &bufferInfo);
 
-	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+	printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 	ACPrintF(sMessageFormat, GREY, cheatName, GREEN, "Injection & Setup successful!");
 
 	// Hack loop
@@ -256,7 +260,6 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			bHealth = !bHealth;
 			bAmmo = !bAmmo;
 			bRecoil = !bRecoil;
-			bNades = !bNades;
 			bFly = !bFly;
 			rapidFireMode = 1;
 
@@ -270,6 +273,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			if (!bAmmo)
 			{
 				handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
+				handleGrenade(moduleBase, &nadeOpcodes, bAmmo);
 			}
 			if (!bRecoil)
 			{
@@ -279,10 +283,6 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			if (rapidOpcodes.size() > 0)
 			{
 				handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
-			}
-			if (!bNades)
-			{
-				handleGrenade(moduleBase, &nadeOpcodes, bNades);
 			}
 			if (!bFly)
 			{
@@ -312,13 +312,14 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD2) & 1)
 		{
 			bAmmo = !bAmmo;
 			handleAmmo(moduleBase, &ammoOpcodes, bAmmo);
+			handleGrenade(moduleBase, &nadeOpcodes, bAmmo);
 
 			if (bAmmo)
 			{
@@ -330,7 +331,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD3) & 1)
@@ -348,7 +349,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD4) & 1)
@@ -373,25 +374,24 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			handleRapidFire(moduleBase, &rapidOpcodes, rapidFireMode);
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD5) & 1)
 		{
-			bNades = !bNades;
-			handleGrenade(moduleBase, &nadeOpcodes, bNades);
+			bTriggerBot = !bTriggerBot;
 
-			if (bNades)
+			if (bTriggerBot)
 			{
-				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Grenades", GREEN, "ON");
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Triggerbot", GREEN, "ON");
 			}
 			else
 			{
-				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Unlimited Grenades", RED, "OFF");
+				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Triggerbot", RED, "OFF");
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD6) & 1)
@@ -409,7 +409,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD7) & 1)
@@ -458,7 +458,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 
 			SetConsoleCursorPosition(h, bufferInfo.dwCursorPosition);
-			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
+			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bTriggerBot, bFly, bNameChanger);
 		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
 		ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
@@ -481,6 +481,20 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			else
 			{
 				nameChangerCtr++;
+			}
+		}
+
+		if (bTriggerBot)
+		{
+			// GetCrosshairEntity returns 0 if no entity is found
+			Player *crosshairEntity = GetCrosshairEntity();
+			if (crosshairEntity && crosshairEntity->team != localPlayerPtr -> team)
+			{
+				localPlayerPtr->bAttacking = 1;
+			}
+			else
+			{
+				localPlayerPtr->bAttacking = 0;
 			}
 		}
 	}
@@ -572,10 +586,10 @@ void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int ra
 	}
 }
 
-void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bNades)
+void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bTriggerBot)
 {
 	// Add a nade to the player's inventory if the grenade cheat was activated
-	if (bNades)
+	if (bTriggerBot)
 	{
 		localPlayerPtr->grenadeAmmo += 1;
 	}
@@ -583,6 +597,6 @@ void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bNa
 	DWORD hookAddress = moduleBase + 0x63378;
 	int hookLength = 5;
 	jmpBackAddyNades = hookAddress + hookLength;
-	Hook((void*)hookAddress, unlimNades, hookLength, bNades, oldOpCodes);
+	Hook((void*)hookAddress, unlimNades, hookLength, bTriggerBot, oldOpCodes);
 }
 

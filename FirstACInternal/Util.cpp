@@ -14,7 +14,7 @@ void clearLine(int limit)
 	std::cout << std::endl;
 }
 
-void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, bool bNades, bool bFly, bool bNameChanger)
+void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, bool bTriggerBot, bool bFly, bool bNameChanger)
 {
 	std::cout << "---------------------------------------------" << std::endl;
 	std::cout << "|-------Assault Cube Internal Trainer-------|" << std::endl;
@@ -68,14 +68,14 @@ void printCheatInfo(bool bHealth, bool bAmmo, bool bRecoil, int rapidFireMode, b
 	}
 	clearLine(5);
 	
-	std::cout << "| " << blue << "[NUM_PAD 5]" << white << " Unlimited Grenades :";
-	if (bNades)
+	std::cout << "| " << blue << "[NUM_PAD 5]" << white << " Triggerbot :";
+	if (bTriggerBot)
 	{
-		std::cout << green << "     ON" << white << "   |";
+		std::cout << green << "             ON" << white << "   |";
 	}
 	else
 	{
-		std::cout << red << "     OFF" << white << "  |";
+		std::cout << red << "             OFF" << white << "  |";
 	}
 	clearLine(5);
 
