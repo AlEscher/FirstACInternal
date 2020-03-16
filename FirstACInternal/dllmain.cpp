@@ -7,6 +7,7 @@
 #include <valarray>
 #include "util.h"
 #include "mem.h"
+#include "entity.h"
 
 void handleHealth(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bHealth);
 void handleAmmo(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bAmmo);
@@ -16,7 +17,8 @@ void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bNa
 
 uintptr_t localPlayerForGodMode;
 uintptr_t ammoAddr;
-uintptr_t localPlayer;
+uintptr_t localPlayerASM;
+Player* localPlayerPtr;
 int rapidFireMode;
 
 DWORD jmpBackAddyHealth;
@@ -46,7 +48,7 @@ void __declspec(naked) godMode()
 	{
 		// our code here
 		// check if the game is trying to subtract health from us, the local player
-		// the address of the entity that is being damaged is in ebx (localPlayer + F4, found out through CheatEngine -> FInd what accesses)
+		// the address of the entity that is being damaged is in ebx (localPlayerPtr + F4, found out through CheatEngine -> FInd what accesses)
 		cmp ebx, localPlayerForGodMode
 		// if it's us, skip the health subtraction
 		je label
@@ -80,7 +82,7 @@ void __declspec(naked) noRecoil()
 		// do this over the ebx register since cmp [esi+8] apparently doesn't work
 		push ebx
 		mov ebx,[esi+8]
-		cmp ebx, localPlayer
+		cmp ebx, localPlayerASM
 		pop ebx
 		je skip
 		// the op code we overwrote
@@ -103,7 +105,7 @@ void __declspec(naked) rapidFire()
 		// edx contains pointer to weaponWaittime inside of local entity
 		// the wait times are written between offset 0x164 and 0x180
 		sub edx, 0x180
-		cmp edx, localPlayer
+		cmp edx, localPlayerASM
 		jle firstCheck
 		// add and sub must be after conditional jumps as it will overwrite flags
 		add edx, 0x180
@@ -115,7 +117,7 @@ void __declspec(naked) rapidFire()
 		add edx, 0x180
 		// check lower limit
 		sub edx, 0x164
-		cmp edx, localPlayer
+		cmp edx, localPlayerASM
 		jge secondCheck
 		add edx, 0x164
 		mov [edx], ecx
@@ -151,7 +153,7 @@ void __declspec(naked) unlimNades()
 	{
 		// grenadeAmmo address is stored in eax, offset 0x158 in local entity
 		sub eax, 0x158
-		cmp eax, localPlayer
+		cmp eax, localPlayerASM
 		// add and sub must be after conditional jumps as it will overwrite flags
 		je skip
 		add eax, 0x158
@@ -172,7 +174,7 @@ void __declspec(naked) speedHack()
 	{
 		// local player is stored in ebx
 		fld DWORD ptr[ebx + 0x10]
-		cmp ebx, localPlayer
+		cmp ebx, localPlayerASM
 		jne normal
 		// imul uses both registers for the result of the multiplication
 		push eax
@@ -202,20 +204,20 @@ DWORD WINAPI HackThread(HMODULE hModule)
 
 	// Setup the variables we need
 	uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
-	localPlayer = *(uintptr_t*)(moduleBase + 0x10F4F4);
-
-	char* playerNamePtr = (char*)(localPlayer + 0x225);
-	// fill the player name with spaces (I believe the name can be max 15 characters, not sure though)
-	for (unsigned int i = strlen((const char*)playerNamePtr); i < 15 - strlen((const char*)playerNamePtr); i++)
+	localPlayerPtr =  nullptr;
+	localPlayerASM = *(uintptr_t*)(moduleBase + 0x10F4F4);
+	localPlayerPtr = *(Player**)(moduleBase + 0x10F4F4);
+	// fill the player name with spaces (i believe the name can be max 15 characters, not sure though)
+	for (unsigned int i = strlen(localPlayerPtr->name); i < 15 - strlen(localPlayerPtr->name); i++)
 	{
-		*(playerNamePtr + i) = ' ';
+		localPlayerPtr->name[i] = ' ';
 	}
-	std::valarray<char> playerName(playerNamePtr, strlen((const char*)playerNamePtr));
-	std::string nameBackup(playerNamePtr, strlen((const char*)playerNamePtr));
+	std::valarray<char> playerName(localPlayerPtr->name, strlen(localPlayerPtr->name));
+	std::string nameBackup(localPlayerPtr->name, strlen(localPlayerPtr->name));
 	int nameChangerCtr = 0;
 	
 	ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
-	localPlayerForGodMode = localPlayer + 0xF4;
+	localPlayerForGodMode = localPlayerASM + 0xF4;
 	rapidFireMode = 1;
 
 	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bFly = false, coordSet = false, bNameChanger = false;
@@ -240,6 +242,10 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	// Hack loop
 	while (true)
 	{
+		if (!localPlayerPtr)
+		{
+			continue;
+		}
 		// Key input
 		if (GetAsyncKeyState(VK_END) & 1)
 		{
@@ -278,12 +284,12 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			}
 			if (!bFly)
 			{
-				*(BYTE*)(localPlayer + 0x338) = 0;
+				localPlayerPtr->fly = 0;
 			}
 			// reset the name
 			for (unsigned int i = 0; i < nameBackup.size(); i++)
 			{
-				*(playerNamePtr + i) = nameBackup[i];
+				localPlayerPtr->name[i] = nameBackup[i];
 			}
 
 			break;
@@ -386,18 +392,17 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 
-		// disabled for now since it's unstable
 		if (GetAsyncKeyState(VK_NUMPAD6) & 1)
 		{
 			bFly = !bFly;
 			if (bFly)
 			{
-				*(BYTE*)(localPlayer + 0x338) = 5;
+				localPlayerPtr->fly = 5;
 				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Fly Hack", GREEN, "ON");
 			}
 			else
 			{
-				*(BYTE*)(localPlayer + 0x338) = 0;
+				localPlayerPtr->fly = 0;
 				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Fly Hack", RED, "OFF");
 			}
 
@@ -408,14 +413,14 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		if (GetAsyncKeyState(VK_NUMPAD7) & 1)
 		{
 			// increment # of kills by 10
-			*(int*)(localPlayer + 0x1FC) += 10;
+			localPlayerPtr->numOfKills += 10;
 		}
 
 		if (GetAsyncKeyState(VK_NUMPAD8) & 1)
 		{
-			coordinates[0] = *(float*)(localPlayer + 0x34);
-			coordinates[1] = *(float*)(localPlayer + 0x38);
-			coordinates[2] = *(float*)(localPlayer + 0x3C);
+			coordinates[0] = localPlayerPtr->posCoord.x;
+			coordinates[1] = localPlayerPtr->posCoord.y;
+			coordinates[2] = localPlayerPtr->posCoord.z;
 			coordSet = true;
 			ACPrintF(sMessageFormat, GREY, cheatName, YELLOW, "Teleporter coordinates set");
 		}
@@ -424,9 +429,9 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		{
 			if (coordSet)
 			{
-				*(float*)(localPlayer + 0x34) = coordinates[0];
-				*(float*)(localPlayer + 0x38) = coordinates[1];
-				*(float*)(localPlayer + 0x3C) = coordinates[2];
+				localPlayerPtr->posCoord.x = coordinates[0];
+				localPlayerPtr->posCoord.y = coordinates[1];
+				localPlayerPtr->posCoord.z = coordinates[2];
 				ACPrintF(sMessageFormat, GREY, cheatName, GREEN, "Teleported");
 			}
 		}
@@ -440,7 +445,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				// reset name
 				for (unsigned int i = 0; i < nameBackup.size(); i++)
 				{
-					*(playerNamePtr + i) = nameBackup[i];
+					localPlayerPtr->name[i] = nameBackup[i];
 				}
 
 				ACPrintF(settingUpdate, GREY, cheatName, WHITE, "Name Changer", RED, "OFF");
@@ -467,7 +472,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				// write the shifted name into memory
 				for (unsigned int i = 0; i < playerName.size(); i++)
 				{
-					*(playerNamePtr + i) = playerName[i];
+					localPlayerPtr->name[i] = playerName[i];
 				}
 				nameChangerCtr = 0;
 			}
@@ -570,7 +575,7 @@ void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bNa
 	// Add a nade to the player's inventory if the grenade cheat was activated
 	if (bNades)
 	{
-		*(int*)(localPlayer + 0x158) += 1;
+		localPlayerPtr->grenadeAmmo += 1;
 	}
 	// hook at grenadeAmmo reduction
 	DWORD hookAddress = moduleBase + 0x63378;
