@@ -8,7 +8,7 @@ Cheaters are beaters and Hackers are whackers.
 * Unlimited Ammo
 * No recoil
 * Rapid fire
-* Unlimted grenades
+* Triggerbot
 * Fly Hack
 * Set teleporter coordinates
 * Teleport to set coordinates
