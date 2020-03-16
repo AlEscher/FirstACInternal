@@ -15,8 +15,7 @@ void handleRecoil(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bRec
 void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int rapidFireMode);
 void handleGrenade(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, bool bNades);
 
-uintptr_t localPlayerForGodMode;
-uintptr_t ammoAddr;
+int32_t *ammoAddr;
 uintptr_t localPlayerASM;
 Player* localPlayerPtr;
 int rapidFireMode;
@@ -49,13 +48,16 @@ void __declspec(naked) godMode()
 		// our code here
 		// check if the game is trying to subtract health from us, the local player
 		// the address of the entity that is being damaged is in ebx (localPlayerPtr + F4, found out through CheatEngine -> FInd what accesses)
-		cmp ebx, localPlayerForGodMode
+		sub ebx, 0xF4
+		cmp ebx, localPlayerASM
 		// if it's us, skip the health subtraction
 		je label
 		// else execute the normal code
+		add ebx, 0xF4
 		sub [ebx + 0x04], edi
 		label:
 		// execute the instruction that we overwrite
+		add ebx, 0xF4
 		mov eax, edi
 		jmp [jmpBackAddyHealth]
 	}
@@ -216,8 +218,8 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	std::string nameBackup(localPlayerPtr->name, strlen(localPlayerPtr->name));
 	int nameChangerCtr = 0;
 	
-	ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
-	localPlayerForGodMode = localPlayerASM + 0xF4;
+	// needed for our injected assembly code
+	ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
 	rapidFireMode = 1;
 
 	bool bHealth = false, bAmmo = false, bRecoil = false, bNades = false, bFly = false, coordSet = false, bNameChanger = false;
@@ -459,7 +461,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 			printCheatInfo(bHealth, bAmmo, bRecoil, rapidFireMode, bNades, bFly, bNameChanger);
 		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
-		ammoAddr = mem::FindDMAAddy(moduleBase + 0x10F4F4, { 0x374, 0x14, 0x0 });
+		ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
 		Sleep(5);
 
 		if (bNameChanger)
