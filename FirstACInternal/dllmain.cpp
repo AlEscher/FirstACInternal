@@ -224,7 +224,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
 	rapidFireMode = 1;
 
-	bool bHealth = false, bAmmo = false, bRecoil = false, bFly = false, coordSet = false, bNameChanger = false, bTriggerBot = false;
+	bool bHealth = false, bAmmo = false, bRecoil = false, bFly = false, coordSet = false, bNameChanger = false, bTriggerBot = false, bTriggerBotShooting = false;
 
 	std::vector<BYTE> healthOpcodes, ammoOpcodes, recoilOpcodes, rapidOpcodes, nadeOpcodes, speedOpcodes;
 	std::vector<float> coordinates(3);
@@ -488,13 +488,31 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		{
 			// GetCrosshairEntity returns 0 if no entity is found
 			Player *crosshairEntity = GetCrosshairEntity();
-			if (crosshairEntity && crosshairEntity->team != localPlayerPtr -> team)
+			if (crosshairEntity)
 			{
-				localPlayerPtr->bAttacking = 1;
+				if (crosshairEntity->team != localPlayerPtr->team)
+				{
+					localPlayerPtr->bAttacking = 1;
+					bTriggerBotShooting = true;
+					// if we're holding a grenade, wait a little bit and then throw it
+					if (localPlayerPtr->currentWeaponPtr->ID == 8)
+					{
+						Sleep(10);
+						localPlayerPtr->bAttacking = 0;
+						bTriggerBotShooting = false;
+					}
+				}
+				else
+				{
+					localPlayerPtr->bAttacking = 0;
+					bTriggerBotShooting = false;
+				}
 			}
-			else
+			// if we're not aiming at an enemy anymore but we're shooting because of our triggerbot, stop shooting
+			else if (bTriggerBotShooting)
 			{
 				localPlayerPtr->bAttacking = 0;
+				bTriggerBotShooting = false;
 			}
 		}
 	}
@@ -586,10 +604,10 @@ void handleRapidFire(uintptr_t moduleBase, std::vector<BYTE>* oldOpCodes, int ra
 	}
 }
 
-void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bTriggerBot)
+void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bAmmo)
 {
 	// Add a nade to the player's inventory if the grenade cheat was activated
-	if (bTriggerBot)
+	if (bAmmo)
 	{
 		localPlayerPtr->grenadeAmmo += 1;
 	}
@@ -597,6 +615,6 @@ void handleGrenade(uintptr_t moduleBase, std::vector<BYTE> *oldOpCodes, bool bTr
 	DWORD hookAddress = moduleBase + 0x63378;
 	int hookLength = 5;
 	jmpBackAddyNades = hookAddress + hookLength;
-	Hook((void*)hookAddress, unlimNades, hookLength, bTriggerBot, oldOpCodes);
+	Hook((void*)hookAddress, unlimNades, hookLength, bAmmo, oldOpCodes);
 }
 
