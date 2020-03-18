@@ -2,7 +2,7 @@
 My first internal cheat for the game [Assault Cube](https://assault.cubers.net/)  
 Meant only for Singleplayer, I didn't test anything on servers.  
 Cheaters are beaters and Hackers are whackers.  
-Visit [GuidedHacking](https://guidedhacking.com/) for Game Hacking tutorials
+Visit [GuidedHacking](https://guidedhacking.com/) for Game Hacking tutorials  
 
 ## Features
 * Godmode
