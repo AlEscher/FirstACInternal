@@ -12,7 +12,7 @@ using Vector3 = vec3;
 class Player
 {
 public:
-	char pad_0000[4]; //0x0000
+	DWORD vTable; //0x0000
 	Vector3 headCoord; //0x0004
 	char pad_0010[36]; //0x0010
 	Vector3 posCoord; //0x0034
@@ -82,7 +82,7 @@ public:
 	char pad_0000[4]; //0x0000
 	int32_t ID; //0x0004
 	class Player* owner; //0x0008
-	class N00000C01* guninfo; //0x000C
+	class WeaponInfo* guninfo; //0x000C
 	int32_t* reserveAmmo; //0x0010
 	int32_t* ammo; //0x0014
 	int32_t* waittime; //0x0018
@@ -90,8 +90,29 @@ public:
 	char pad_0020[228]; //0x0020
 }; //Size: 0x0104
 
-class N00000C01
+// Thanks to Kix for these offsets
+class WeaponInfo
 {
 public:
-	char pad_0000[8]; //0x0000
-}; //Size: 0x0008
+	char pad_0000[260]; //0x0000
+	int16_t Sound; //0x0104
+	int16_t Reload; //0x0106
+	int16_t ReloadTime; //0x0108
+	int16_t Wait; //0x010A
+	int16_t Damage; //0x010C
+	int16_t Piercing; //0x010E
+	int16_t ProjSpeed; //0x0110
+	int16_t Part; //0x0112
+	int16_t Spread; //0x0114
+	int16_t Recoil; //0x0116
+	int16_t MagSize; //0x0118
+	int16_t KickRotation; //0x011A
+	int16_t KickBack; //0x011C
+	int16_t RecoilIncrease; //0x011E
+	int16_t RecoilBase; //0x0120
+	int16_t MaxRecoil; //0x0122
+	int16_t RecoilBackFade; //0x0124
+	int16_t PushFactor; //0x0126
+	bool bAuto; //0x0128
+	char pad_0129[807]; //0x0129
+}; //Size: 0x0450

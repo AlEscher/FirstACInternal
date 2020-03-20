@@ -131,7 +131,7 @@ void __declspec(naked) rapidFire()
 		// if we're here it means that the weaponWaittime that is being written to is in our local entity between offsets 0x164 and 0x180
 		add edx, 0x164
 		// (1 if rapidFire is off, 16 is "insane" mode which skips the timeout completely)
-		cmp rapidFireMode, 0xF
+		cmp rapidFireMode, 0x10
 		je end
 		push eax
 		push edx
@@ -172,32 +172,6 @@ void __declspec(naked) unlimNades()
 	}
 }
 
-void __declspec(naked) speedHack()
-{
-	__asm
-	{
-		// local player is stored in ebx
-		fld DWORD ptr[ebx + 0x10]
-		cmp ebx, localPlayerASM
-		jne normal
-		// imul uses both registers for the result of the multiplication
-		push eax
-		push edx
-		mov edx, 2
-		// imul uses eax as first operand
-		mov eax,[ebx+0x10]
-		imul edx
-		mov [ebx+0x10],eax
-		pop edx
-		pop eax
-		fmul st(0), st(2)
-		jmp [jmpBackAddySpeed]
-		// execute overwritten instruction
-		normal:
-		fmul st(0), st(2)
-		jmp [jmpBackAddySpeed]
-	}
-}
 
 DWORD WINAPI HackThread(HMODULE hModule)
 {
@@ -223,6 +197,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	// needed for our injected assembly code
 	ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
 	rapidFireMode = 1;
+	int currentWeaponId = 0;
 
 	bool bHealth = false, bAmmo = false, bRecoil = false, bFly = false, coordSet = false, bNameChanger = false, bTriggerBot = false, bTriggerBotShooting = false;
 
@@ -238,6 +213,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 	const char* settingUpdate = "\f%d%s: \f%d%s\f%d %s";
 	const char* cheatName = "[AC_Internal]";
 
+	// Needed for the console menu
 	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
 	CONSOLE_SCREEN_BUFFER_INFO bufferInfo;
 	GetConsoleScreenBufferInfo(h, &bufferInfo);
@@ -462,6 +438,8 @@ DWORD WINAPI HackThread(HMODULE hModule)
 		}
 		// Keep updating the ammo address so that it always points at the current weapon ammo
 		ammoAddr = localPlayerPtr->currentWeaponPtr->ammo;
+		currentWeaponId = localPlayerPtr->currentWeaponPtr->ID;
+
 		Sleep(5);
 
 		if (bNameChanger)
@@ -494,7 +472,7 @@ DWORD WINAPI HackThread(HMODULE hModule)
 				{
 					localPlayerPtr->bAttacking = 1;
 					bTriggerBotShooting = true;
-					// if we're holding a grenade, wait a little bit and then throw it
+					// if we're holding a grenade, wait a little bit and then release it
 					if (localPlayerPtr->currentWeaponPtr->ID == 8)
 					{
 						Sleep(10);
@@ -508,13 +486,25 @@ DWORD WINAPI HackThread(HMODULE hModule)
 					bTriggerBotShooting = false;
 				}
 			}
-			// if we're not aiming at an enemy anymore but we're shooting because of our triggerbot, stop shooting
+			// if we're not aiming at an enemy anymore but we're (still) shooting because of our triggerbot, stop shooting
 			else if (bTriggerBotShooting)
 			{
 				localPlayerPtr->bAttacking = 0;
 				bTriggerBotShooting = false;
 			}
 		}
+
+		if (rapidFireMode > 1)
+		{
+			localPlayerPtr->currentWeaponPtr->guninfo->bAuto = true;
+		}
+		// if rapidFire is off and we're holding a non-automatic weapon, set bAuto back to false
+		// not perfect because it doesn't reset these values while uninjecting, since it's only based on the currentWeaponPtr
+		else if (currentWeaponId == 0 || currentWeaponId == 1 || currentWeaponId == 5 || currentWeaponId == 3 || currentWeaponId == 2 || currentWeaponId == 8)
+		{
+			localPlayerPtr->currentWeaponPtr->guninfo->bAuto = false;
+		}
+
 	}
 
 	// Cleanup & eject
